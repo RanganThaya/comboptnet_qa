@@ -3,6 +3,7 @@ import unittest
 import cvxpy as cp
 import numpy as np
 import torch
+from comboptnet_qa.models.comboptnet.comboptnet import CombOptNetModule
 from cvxpylayers.torch import CvxpyLayer
 from dynaconf import settings
 
