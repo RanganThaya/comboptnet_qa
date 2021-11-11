@@ -156,6 +156,8 @@ def ilp_solver(cost_vector, constraints, lb, ub):
         quicksum(c * var for c, var in zip(cost_vector, variables)), GRB.MINIMIZE
     )
     for a, _b in zip(A, b):
+        # for c, var in zip(a, variables):
+        # print(c, var, _b * -1)
         model.addConstr(quicksum(c * var for c, var in zip(a, variables)) + _b <= 0)
     model.optimize()
     try:
