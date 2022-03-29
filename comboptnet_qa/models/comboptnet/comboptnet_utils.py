@@ -45,10 +45,11 @@ def compute_delta_y(y, y_grad, lb, ub, clip_gradients_to_box, use_canonical_basi
             y_test, ub
         )
         y_grad = y_grad * inside_box_indicator
-
     if use_canonical_basis:
         delta_y = jnp.sign(y_grad)[:, None, :] * jnp.eye(dim)[None, :, :]
         lambdas = jnp.abs(y_grad)
+        num_nodes = y_grad.shape[1]
+        new_y = jnp.zeros((num_nodes))
     else:
         sort_indices = jnp.argsort(jnp.abs(y_grad))
         ranks_of_abs_y_grad = jnp.argsort(sort_indices)

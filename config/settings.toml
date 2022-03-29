@@ -1,1 +1,35 @@
 [default]
+    checkpoint_dir='data/checkpoint'
+    model_dir = 'data/models/model_dir'
+    oie_path='https://storage.googleapis.com/allennlp-public-models/openie-model.2020.03.26.tar.gz'
+    [default.us_data]
+        train='data/us_data/rs_us_train.json'
+        dev='data/us_data/rs_us_dev.json'
+    [default.qasc]
+        train='data/QASC_Dataset/train.jsonl'
+        dev='data/QASC_Dataset/dev.jsonl'
+        test='data/QASC_Dataset/test.jsonl'
+        corpus='data/QASC_Corpus/QASC_Corpus.txt'
+    [default.worldtree_v2]
+        dev='data/worldtree_v2/questions.dev.tsv'
+        test='data/worldtree_v2/questions.test.tsv'
+        train='data/worldtree_v2/questions.train.tsv'
+        lemmatizer_path='data/worldtree_v2/tables/LemmatizerAdditions.tsv'
+        table_store_path='data/worldtree_v2/tables'
+    [default.generics_kb]
+        best='data/generics_kb/GenericsKB-Best.tsv'
+    [default.arc_dataset]
+        [default.arc_dataset.easy]
+            train='data/ARC-V1-Feb2018-2/ARC-Easy/ARC-Easy-Train.jsonl'
+            dev='data/ARC-V1-Feb2018-2/ARC-Easy/ARC-Easy-Dev.jsonl'
+            test='data/ARC-V1-Feb2018-2/ARC-Easy/ARC-Easy-Test.jsonl'
+        [default.arc_dataset.challenge]
+            train='data/ARC-V1-Feb2018-2/ARC-Challenge/ARC-Challenge-Train.jsonl'
+            dev='data/ARC-V1-Feb2018-2/ARC-Challenge/ARC-Challenge-Dev.jsonl'
+            test='data/ARC-V1-Feb2018-2/ARC-Challenge/ARC-Challenge-Test.jsonl'
+    [default.trained_model]
+        distilbert_v2='data/trained_model/distillbert_v2'
+    [default.tupleinf]
+        easy_data='data/tupleinf/TupleInfKB/4thGradeOpenIE.txt'
+        challenge_data='data/tupleinf/TupleInfKB/8thGradeOpenIE.txt'
+

@@ -247,15 +247,6 @@ def mismatch_function(
     correct_solution_indicator *= feasibility_indicator[:, None]
     incorrect_solution_indicator = 1.0 - correct_solution_indicator
 
-    constraints_mismatch = compute_constraints_mismatch(
-        constraints=constraints,
-        y=y,
-        y_prime=y_prime,
-        y_prime_feasible_constraints=y_prime_feasible_constraints,
-        y_prime_inside_box=y_prime_inside_box,
-        tau=tau,
-        incorrect_solution_indicator=incorrect_solution_indicator,
-    )
     cost_mismatch = compute_cost_mismatch(
         cost_vector=cost_vector,
         y=y,
@@ -264,10 +255,7 @@ def mismatch_function(
         y_prime_inside_box=y_prime_inside_box,
     )
     # print(cost_mismatch)
-    total_mismatch = constraints_mismatch
-    # total_mismatch = cost_mismatch
-    if use_cost_mismatch:
-        total_mismatch += cost_mismatch
+    total_mismatch = cost_mismatch
 
     total_mismatch = jnp.mean(
         total_mismatch * lambdas, axis=-1
@@ -288,7 +276,6 @@ def compute_cost_mismatch(
 
     # case distinction in paper: if y' is (constraint-)infeasible or outside of hypercube cost mismatch function is zero
     cost_mismatch = cost_mismatch * y_prime_inside_box * y_prime_feasible_constraints
-    # cost_mismatch = cost_mismatch * y_prime_inside_box
     return cost_mismatch
 
 
