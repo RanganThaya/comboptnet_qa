@@ -109,7 +109,6 @@ class DifferentiableILPsolver(torch.autograd.Function):
         """
         cost_vector, constraints, y, infeasibility_indicator = ctx.saved_tensors
 
-        # print(y_grad.nonzero())
         grad_mismatch_function = grad(mismatch_function, argnums=[0, 1])
         # grad_mismatch_function = grad(mismatch_function, argnums=0])
         grad_cost_vector, grad_constraints = grad_mismatch_function(
@@ -156,20 +155,23 @@ def ilp_solver(cost_vector, constraints, lb, ub):
         with gp.Model(env=env) as model:
             model.setParam("OutputFlag", 0)
             model.setParam("Threads", 1)
-            variables = [
-                model.addVar(lb=lb, ub=ub, vtype=GRB.INTEGER, name="v" + str(i))
-                for i in range(num_variables)
-            ]
+            # variables = [
+            #     model.addVar(lb=lb, ub=ub, vtype=GRB.INTEGER, name="v" + str(i))
+            #     for i in range(num_variables)
+            # ]
+
+            variables = model.addMVar(num_variables, lb=lb, ub=ub, vtype=GRB.INTEGER)
             model.setObjective(
                 quicksum(c * var for c, var in zip(cost_vector, variables)),
                 GRB.MINIMIZE,
             )
-            for a, _b in zip(A, b):
-                # for c, var in zip(a, variables):
-                # print(c, var, _b * -1)
-                model.addConstr(
-                    quicksum(c * var for c, var in zip(a, variables)) + _b <= 0
-                )
+            # for a, _b in zip(A, b):
+            #     # for c, var in zip(a, variables):
+            #     # print(c, var, _b * -1)
+            #     model.addConstr(
+            #         quicksum(c * var for c, var in zip(a, variables)) + _b <= 0
+            #     )
+            model.addConstr(A @ variables + b <= 0)
             model.optimize()
             try:
                 y = np.array([v.x for v in model.getVars()])
@@ -287,8 +289,8 @@ def compute_cost_mismatch(
     cost_mismatch = jnp.maximum(c_diff, 0.0)
 
     # case distinction in paper: if y' is (constraint-)infeasible or outside of hypercube cost mismatch function is zero
-    cost_mismatch = cost_mismatch * y_prime_inside_box * y_prime_feasible_constraints
-    # cost_mismatch = cost_mismatch * y_prime_inside_box
+    # cost_mismatch = cost_mismatch * y_prime_inside_box * y_prime_feasible_constraints
+    cost_mismatch = cost_mismatch * y_prime_inside_box
     return cost_mismatch
 
 

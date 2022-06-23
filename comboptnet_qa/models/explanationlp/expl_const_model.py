@@ -6,15 +6,14 @@ from xmlrpc.client import boolean
 import cvxpy as cp
 import numpy as np
 import torch
-from comboptnet_qa.models.base_clamp import HalfClamp, NegClamp, PosClamp, QuestionClamp
+from comboptnet_qa.models.base_clamp import (HalfClamp, NegClamp, PosClamp,
+                                             QuestionClamp)
 from comboptnet_qa.models.comboptnet.blackbox_ilp import BlackBoxILP
 from comboptnet_qa.models.comboptnet.comboptnet import CombOptNetModule
 from comboptnet_qa.models.comboptnet.utils import torch_parameter_from_numpy
 from comboptnet_qa.models.comboptnet_pytorch import CombOptNet
-
 # from comboptnet_qa.models.cvxpy_model.cvxpy_ilp import CvxpyLayer
 from cvxpylayers.torch import CvxpyLayer
-
 # from comboptnet_qa.models.cvxpy_model.cvxpy_ilp import
 from loguru import logger
 from torch import nn
@@ -283,22 +282,54 @@ class ExplanationLPModel(nn.Module):
             * -1
             + self.question_grounding_overlap_clamp_param * question_grounding_edges
             + self.question_abstract_overlap_clamp_param * question_abstract_edges
+            # self.question_abstract_overlap_clamp_param * question_abstract_edges
             + self.grounding_abstract_overlap_clamp_param * grounding_abstract_edges
+            # + self.question_grounding_relevance_clamp_param
+            # * question_abstract_similarity
+            # * (question_grounding_adj)
             + self.question_abstract_relevance_clamp_param
             * question_abstract_similarity
+            # question_abstract_similarity
             * (question_abstract_adj)
         )
 
+        # edge_weights = torch.nn.functional.softmax(
+        #     edge_weights.reshape(-1, self.num_nodes * self.num_nodes), dim=1
+        # )
         edge_weights = edge_weights.reshape(-1, self.num_nodes * self.num_nodes) * -1
 
         edge_weights = torch.triu(edge_weights, diagonal=1)
 
+        # A, b = constraints[:, :, :-1], constraints[:, :, -1]
+        # results = self.comboptnet(A, b, c)[0]
         results = self.comboptnet(edge_weights, constraints)
+        # (results, xs, ys, ss) = self.cvxpylayer(
+        #     edge_weights,
+        #     constraints=constraints,
+        #     num_nodes=self.num_nodes,
+        #     solver_args={
+        #         "warm_starts": self.warm_starts,
+        #     },
+        # )
+        # # # print(results)
+        # self.warm_starts = (xs, ys, ss)
+        # results = results.view(-1, self.num_nodes, self.num_nodes)
         comb_results = results.view(-1, self.num_nodes, self.num_nodes)
 
-        print(comb_results[:, :4, :])
-
         results = torch.triu(comb_results)
+
+        # upper_tri = (
+        #     torch.triu(results, diagonal=1)
+        #     * edge_weights.view(-1, self.num_nodes, self.num_nodes)
+        #     * -1
+        # )
+        # upper_sum = torch.sum(upper_tri, dim=2)
+        # upper_sum = upper_sum[:, : self.num_choices]
+
+        # upper_bias = torch.sum(upper_sum[:, self.num_choices :], dim=1)
+        # upper_bias = upper_bias.unsqueeze(1).repeat(1, self.num_choices)
+        # upper_sum = upper_sum + upper_bias
+        # print(upper_sum)
 
         optimizer_scores = (
             results * edge_weights.view(-1, self.num_nodes, self.num_nodes) * -1
@@ -310,14 +341,62 @@ class ExplanationLPModel(nn.Module):
         predictions = torch.diagonal(results, dim1=1, dim2=2)
         comb_predictions = torch.diagonal(comb_results, dim1=1, dim2=2)
 
+        # print(torch.linalg.matrix_rank(torch.round(results)))
+
+        # U, S, Vh = torch.svd_lowrank(results, q=2, niter=10)
+
+        # U = U[:, :, 0]
+        # print(U)
+        # S = torch.sqrt(S[:, 0]).unsqueeze(1).repeat(1, self.num_nodes)
+        # U = U * S
+
+        # svd_answer_predicts = torch.abs(U[:, : self.num_choices])
+
         real_answer_predicts = predictions[:, : self.num_choices]
         summed_up = summed_up.unsqueeze(1).repeat(1, self.num_choices)
+
+        # print(summed_up)
+        # print(real_answer_predicts)
 
         real_answer_predicts = (
             real_answer_predicts * summed_up
             + ((1 - real_answer_predicts) * summed_up) * -1
         )
 
+        # real_answer_predicts = real_answer_predicts * summed_up
+        # sigmoid_predicts = self.sigmoid(real_answer_predicts)
+
+        # pos_loss = (1 - (torch.masked_select(sigmoid_predicts, labels.bool()))).mean()
+        # neg_loss = ((torch.masked_select(sigmoid_predicts, (1 - labels).bool()))).mean()
+        # answer_loss = pos_loss + neg_loss
+        # print(real_answer_predicts)
+        # real_answer_predicts = real_answer_predicts * self.opts.get("temperature", 0.1)
+        # print(real_answer_predicts)
+
+        # (psd_edges, xs, ys, ss) = self.cvxpylayer(
+        #     results,
+        #     solver_args={
+        #         "warm_starts": self.warm_starts,
+        #     },
+        # )
+        # self.warm_starts = (xs, ys, ss)
+
+        # print(psd_edges)
+
+        # L = torch.linalg.cholesky(psd_edges)
+        # print(L)
+
+        # print(results[0].nonzero())
+        # print(optimized_scores)
+        # print(optimized_scores.shape)
+        # print(similarity_scores[0])
+        # print(similarity_scores.shape)
+
+        # Answer loss
+
+        # # Explanation loss
+        # print(results.shape)
+        # print(torch.argmax(labels, dim=1))
         selection_indices = torch.argmax(labels, dim=1).unsqueeze(1)
         fact_prediction = results[
             torch.arange(results.shape[0])[:, None], selection_indices, :
@@ -327,14 +406,36 @@ class ExplanationLPModel(nn.Module):
             1 - (torch.masked_select(fact_prediction, similarity_scores.bool()))
         ).mean()
 
+        # real_answer_predicts[real_answer_predicts == 0] = -6
+
+        # loss = pos_loss + neg_loss
         loss = (
             self.cross_loss(real_answer_predicts, torch.argmax(labels, dim=1))
             + exp_loss
         )
+        # loss = (real_answer_predicts * (1 - labels)).mean()
 
+        # print(upper_sum)
+        # print(labels)
+        # loss = (
+        #     self.cross_loss(upper_sum, torch.argmax(labels, dim=1))
+        #     # + exp_loss
+        # )
+        # loss = self.kl_loss(
+        #     torch.nn.functional.log_softmax(upper_sum, dim=1),
+        #     torch.nn.functional.log_softmax(labels, dim=1),
+        # )
+        # loss = answer_loss
+        # loss = torch.abs(real_answer_predicts - labels * summed_up).mean()
+        # loss = ((1 - labels) * real_answer_predicts).mean()
         return (
+            # loss + 0.01 * learning_reg,
             loss,
+            # svd_answer_predicts,
+            # upper_sum,
             real_answer_predicts,
+            # predictions[:, : self.num_choices],
+            # fact_prediction,
             comb_predictions[:, self.num_choices :]
             * is_abstract[:, self.num_choices :],
         )

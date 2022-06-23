@@ -113,13 +113,20 @@ class DifferentiableILPsolver(torch.autograd.Function):
         @return: torch.Tensor of shape (bs, num_variables) gradient dL / cost_vector
                  torch.Tensor of shape (bs, num_constraints, num_variables + 1) gradient dL / constraints
         """
+        # y_grad = y_grad.view(-1, ctx.params["num_nodes"], ctx.params["num_nodes"])
+        # y_grad = y_grad + torch.transpose(y_grad, 1, 2)
+        # y_grad = y_grad.view(-1, ctx.params["num_nodes"] * ctx.params["num_nodes"])
         cost_vector, constraints, y_old, infeasibility_indicator = ctx.saved_tensors
         grad_output_numpy = y_grad.detach().cpu().numpy()
 
-        # print(grad_output_numpy.nonzero())
-        # print(grad_output_numpy[0].reshape(24, 24))
+        # print(grad_output_numpy[0].reshape(14, 14))
+
+        # def check_symmetric(a, rtol=1e-05, atol=1e-08):
+        # return np.allclose(a, a.T, rtol=rtol, atol=atol)
+
         cost_vector = cost_vector.cpu().detach().numpy()
         cost_vector = cost_vector + ctx.params["lambda_val"] * grad_output_numpy
+
         dynamic_args = [
             {
                 "cost_vector": cost_vector,
@@ -144,6 +151,7 @@ class DifferentiableILPsolver(torch.autograd.Function):
             torch.from_numpy(np.array(res)).to(device) for res in zip(*result)
         ]
         cost_vector_grad = -(y_old - y_new) / ctx.params["lambda_val"]
+        # print(cost_vector_grad.nonzero())
 
         return cost_vector_grad, None, None
 
@@ -186,6 +194,12 @@ def ilp_solver(cost_vector, constraints, lb, ub, num_nodes, start=None):
             identity = 1 - np.identity(num_nodes)
             identity = identity.reshape((num_nodes * num_nodes))
             cost_vector = identity * cost_vector
+
+            # def check_symmetric(a, rtol=1e-05, atol=1e-08):
+            #     return np.allclose(a, a.T, rtol=rtol, atol=atol)
+
+            # print(check_symmetric(cost_vector))
+
             # print(identity)
 
             model.setObjective(

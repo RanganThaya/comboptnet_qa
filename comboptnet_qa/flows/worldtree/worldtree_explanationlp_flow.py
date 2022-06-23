@@ -364,20 +364,20 @@ CHALLENGE = "Challenge"
 EASY = "Easy"
 
 
-# LIMIT = 10
 LIMIT = 20
+# LIMIT = 10
 # LIMIT = 20
 # LIMIT = 30
-# LIMIT = 40
+# LIMIT = 30
 # LIMIT = 40
 # LIMIT = 80
 # LIMIT = 100
 # GROUNDING_LIMIT = LIMIT / 2
 # GROUNDING_LIMIT = 30
+# GROUNDING_LIMIT = 10
 GROUNDING_LIMIT = 0
 # GROUNDING_LIMIT = 0
-# GROUNDING_LIMIT = 0
-# GROUNDING_LIMIT = 20
+# GROUNDING_LIMIT = 10
 # GROUNDING_LIMIT = 60
 GROUNDING_ABSTRACT_LIMIT = 30
 QUESIONT_ABSTRACT_LIMIT = 50
@@ -417,8 +417,8 @@ def dataset_construction(split="test", dataset="arc", **opts):
     # Build the flow
     with Flow("Question answering with WorldTreeCorpus") as flow:
         with tags(split):
-            arc = qa_dataset(split)
-            # arc = qa_dataset(split, "arc")
+            # arc = qa_dataset(split)
+            arc = qa_dataset(split, "worldtree")
             # arc = arc_dataset_extraction(arc_challenge_path[split], CHALLENGE)
             # arc = worldtree_extraction(worldtree_path[split], WORLDTREE_VERSION)
             lemmatized_question = lemmatizer_task(answer_mapping(arc), lemmatizer_path)
@@ -653,20 +653,18 @@ def explanation_evaluate(
     with Flow("Question answering with WorldTreeCorpus") as flow:
         with tags("train" + "worldtree"):
             train_dataset = dataset_construction(split="train", dataset="worldtree")
-        # with tags("test"):
-        #     test_dataset = explanation_construction(split="test")
         with tags("test" + "worldtree"):
-            dev_dataset = dataset_construction(split="test", dataset="worldtree")
-        # with tags("dev" + "worldtree"):
-        #     test_dataset = dataset_construction(split="dev", dataset="worldtree")
-        # # with tags("train" + "arc"):
-        # #     train_dataset_arc = dataset_construction(split="train", dataset="arc")
-        # # with tags("test" + "arc"):
-        # #     dev_dataset_arc = dataset_construction(split="test", dataset="arc")
+            test_dataset = dataset_construction(split="test", dataset="worldtree")
+        with tags("dev" + "worldtree"):
+            dev_dataset = dataset_construction(split="dev", dataset="worldtree")
+        # with tags("train" + "arc"):
+        #     train_dataset = dataset_construction(split="train", dataset="arc")
+        # with tags("test" + "arc"):
+        #     dev_dataset = dataset_construction(split="test", dataset="arc")
         eval_results = trainer(
             train_dataset=extract_key(train_dataset, "dataset"),
-            dev_dataset=extract_key(dev_dataset, "dataset"),
-            # dev_dataset=extract_key(dev_dataset, "dataset"),
+            dev_dataset=extract_key(test_dataset, "dataset"),
+            # dev_dataset=extract_key(test_dataset, "dataset"),
             # test_dataset=extract_key(test_dataset, "dataset"),
             # load_task_name="alpha_optimized_explanation",
             # task_name="full_optimized_explanation_arc_tuple",
@@ -680,9 +678,12 @@ def explanation_evaluate(
             # task_name="ApproxExplanationLP",
             output_dir=model_dir,
             mode="train",
-            # mode=mode,
+            # mode="eval",
             eval_fn=None,
         )
+        # precison_evaluate(dev_dataset, eval_results, k=1)
+        # precison_evaluate(dev_dataset, eval_results, k=2)
+        # precison_evaluate(dev_dataset, eval_results, k=3)
     state = FlowRunner(flow=flow, task_runner_cls=UnhasedTaskRunner).run(
         return_tasks=flow.tasks
     )
@@ -694,16 +695,27 @@ def explanation_evaluate(
 
 # score = explanation_evaluate(False, False, "train")
 
+# explanation_evaluate(lambda_val={"lambda_val": 107.22}) arc
+explanation_evaluate(lambda_val={"lambda_val": 10})
 
-optimize(
-    parameters=[
-        {
-            "name": "lambda_val",
-            "type": "range",
-            "bounds": [1, 100],
-        },
-    ],
-    # Booth function
-    evaluation_function=explanation_evaluate,
-    minimize=False,
-)
+
+# optimize(
+#     parameters=[
+#         {
+#             "name": "lambda_val",
+#             "type": "range",
+#             # "bounds": [100, 300],
+#             "bounds": [10, 200],
+#         }
+#         # {
+#         #     "name": "temperature",
+#         #     "type": "range",
+#         #     "bounds": [1e-3, 1.0],
+#         # },
+#     ],
+#     # Booth function
+#     evaluation_function=explanation_evaluate,
+#     minimize=False,
+# )
+
+# 30 - 68.7

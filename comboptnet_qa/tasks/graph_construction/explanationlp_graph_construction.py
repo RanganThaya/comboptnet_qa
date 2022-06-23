@@ -538,9 +538,9 @@ class TorchDataset(Dataset):
         is_abstract_fact = torch.Tensor(is_abstract_fact @ is_abstract_fact.T)
         abstract_fact_select_A = (
             torch.diag(torch.ones((NO_OF_NODES))).reshape(NO_OF_NODES * NO_OF_NODES)
-            # * is_abstract_fact.reshape(NO_OF_NODES * NO_OF_NODES)
+            * is_abstract_fact.reshape(NO_OF_NODES * NO_OF_NODES)
         ).unsqueeze(0)
-        abstract_fact_select_b = torch.Tensor([[abstract_limit + 1]]) * -1
+        abstract_fact_select_b = torch.Tensor([[abstract_limit]]) * -1
 
         node_select_A = (
             torch.diag(torch.ones((NO_OF_NODES))).reshape(NO_OF_NODES * NO_OF_NODES)
@@ -553,7 +553,7 @@ class TorchDataset(Dataset):
                 root_constraint_A2,
                 edge_selection_A,
                 abstract_fact_select_A,
-                # node_select_A,
+                node_select_A,
             )
         )
         b = torch.cat(
@@ -562,7 +562,7 @@ class TorchDataset(Dataset):
                 root_constraint_b2,
                 edge_selection_b,
                 abstract_fact_select_b,
-                # node_select_b,
+                node_select_b,
             )
         )
         constraints = torch.cat((A, b), dim=1)
@@ -675,8 +675,8 @@ class TorchDataset(Dataset):
             grounding_grounding_edges,  # 4
             grounding_abstract_edges,  # 5
             is_abstract,  # 6
-            mapping,  # 7
-            # similarity_scores,  # 7
+            # mapping,  # 7
+            similarity_scores,  # 7
             hypothesis_input_ids,  # 8
             fact_input_ids,  # 9
             hypothesis_attention_mask,  # 10

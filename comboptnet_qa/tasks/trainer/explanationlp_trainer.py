@@ -23,9 +23,9 @@ class ExplanationLPTrainer(Task):
         super(ExplanationLPTrainer, self).__init__(**kwargs)
         # self.per_gpu_batch_size = kwargs.get("per_gpu_batch_size", 15)
         # self.per_gpu_batch_size = kwargs.get("per_gpu_batch_size", 2)
-        # self.per_gpu_batch_size = kwargs.get("per_gpu_batch_size", 4)
+        self.per_gpu_batch_size = kwargs.get("per_gpu_batch_size", 4)
         # self.per_gpu_batch_size = kwargs.get("per_gpu_batch_size", 2)
-        self.per_gpu_batch_size = kwargs.get("per_gpu_batch_size", 8)
+        # self.per_gpu_batch_size = kwargs.get("per_gpu_batch_size", 8)
         # self.per_gpu_batch_size = kwargs.get("per_gpu_batch_size", 2)
         # self.per_gpu_batch_size = kwargs.get("per_gpu_batch_size", 4)
         # self.per_gpu_batch_size = kwargs.get("per_gpu_batch_size", 8)
@@ -36,9 +36,10 @@ class ExplanationLPTrainer(Task):
         # self.per_gpu_batch_size = kwargs.get("per_gpu_batch_size", 6)
         self.cuda = kwargs.get("cuda", True)
         self.gradient_accumulation_steps = kwargs.get("gradient_accumulation_steps", 1)
-        # self.num_train_epochs = kwargs.get("num_train_epochs", 14)
+        self.num_train_epochs = kwargs.get("num_train_epochs", 6)
+        # self.num_train_epochs = kwargs.get("num_train_epochs", 8)
         # self.num_train_epochs = kwargs.get("num_train_epochs", 50)
-        self.num_train_epochs = kwargs.get("num_train_epochs", 8)
+        # self.num_train_epochs = kwargs.get("num_train_epochs", 8)
         self.learning_rate = kwargs.get("learning_rate", 1e-5)
         # self.learning_rate = kwargs.get("learning_rate", 1e-5)
         # self.weight_decay = kwargs.get("weight_decay", 0.01)
@@ -76,7 +77,6 @@ class ExplanationLPTrainer(Task):
             "cuda" if torch.cuda.is_available() and self.cuda else "cpu"
         )
         n_gpu = torch.cuda.device_count() if self.cuda else 0
-        # n_gpu = 1
         self.logger.info(f"GPUs used {n_gpu}")
         train_batch_size = self.per_gpu_batch_size * max(1, n_gpu)
         test_batch_size = train_batch_size
@@ -125,21 +125,22 @@ class ExplanationLPTrainer(Task):
             outputs["epoch_results "] = epoch_results
         logger.info("Running evalutaion mode")
         logger.info(f"Loading from {output_dir}/{task_name}")
-        # model.load_state_dict(
-        #     torch.load(os.path.join(f"{output_dir}/{task_name}", "model.pt"))
-        # )
-        # model.to(device)
-        # if mode == "eval":
-        #     best_score, answer_preds, node_preds = self.eval(
-        #         model,
-        #         test_dataloader,
-        #         test_dataset,
-        #         device,
-        #         n_gpu,
-        #         eval_fn,
-        #         mode="dev",
-        #     )
-        #     return best_score, answer_preds, node_preds
+
+        if mode == "eval":
+            model.load_state_dict(
+                torch.load(os.path.join(f"{output_dir}/{task_name}", "model.pt"))
+            )
+            model.to(device)
+            best_score, answer_preds, node_preds = self.eval(
+                model,
+                dev_dataloader,
+                dev_dataset,
+                device,
+                n_gpu,
+                eval_fn,
+                mode="dev",
+            )
+            return best_score, answer_preds, node_preds
         # if test_dataset is not None:
         #     test_data_loader = DataLoader(
         #         test_dataset, batch_size=test_batch_size, shuffle=False
